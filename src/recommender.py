@@ -1,5 +1,6 @@
-from typing import List, Dict, Tuple, Optional
-from dataclasses import dataclass
+import csv
+from dataclasses import asdict, dataclass
+from typing import Dict, List, Tuple
 
 @dataclass
 class Song:
@@ -38,36 +39,79 @@ class Recommender:
         self.songs = songs
 
     def recommend(self, user: UserProfile, k: int = 5) -> List[Song]:
-        # TODO: Implement recommendation logic
-        return self.songs[:k]
+        """Return the top k songs ranked for a user profile."""
+        user_prefs = asdict(user)
+        return sorted(
+            self.songs,
+            key=lambda song: score_song(user_prefs, asdict(song))[0],
+            reverse=True,
+        )[:max(0, k)]
 
     def explain_recommendation(self, user: UserProfile, song: Song) -> str:
-        # TODO: Implement explanation logic
-        return "Explanation placeholder"
+        """Explain which song attributes contributed to its score."""
+        _, reasons = score_song(asdict(user), asdict(song))
+        return "; ".join(reasons)
 
 def load_songs(csv_path: str) -> List[Dict]:
-    """
-    Loads songs from a CSV file.
-    Required by src/main.py
-    """
-    # TODO: Implement CSV loading logic
-    print(f"Loading songs from {csv_path}...")
-    return []
+    """Load songs from CSV and convert numeric fields to Python numbers."""
+    songs = []
+    float_fields = {
+        "energy",
+        "valence",
+        "danceability",
+        "acousticness",
+    }
+
+    with open(csv_path, newline="", encoding="utf-8") as csv_file:
+        for row in csv.DictReader(csv_file):
+            row["id"] = int(row["id"])
+            row["tempo_bpm"] = int(row["tempo_bpm"])
+            for field in float_fields:
+                row[field] = float(row[field])
+            songs.append(row)
+
+    return songs
 
 def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
-    """
-    Scores a single song against user preferences.
-    Required by recommend_songs() and src/main.py
-    """
-    # TODO: Implement scoring logic using your Algorithm Recipe from Phase 2.
-    # Expected return format: (score, reasons)
-    return []
+    """Score one song and return both its numeric score and explanations."""
+    score = 0.0
+    reasons = []
+
+    favorite_genre = user_prefs.get("favorite_genre", user_prefs.get("genre", ""))
+    favorite_mood = user_prefs.get("favorite_mood", user_prefs.get("mood", ""))
+    target_energy = float(
+        user_prefs.get("target_energy", user_prefs.get("energy", 0.5))
+    )
+
+    if str(song["genre"]).casefold() == str(favorite_genre).casefold():
+        score += 3.0
+        reasons.append("genre match (+3.00)")
+
+    if str(song["mood"]).casefold() == str(favorite_mood).casefold():
+        score += 2.0
+        reasons.append("mood match (+2.00)")
+
+    energy_similarity = max(0.0, 1.0 - abs(float(song["energy"]) - target_energy))
+    energy_points = 2.0 * energy_similarity
+    score += energy_points
+    reasons.append(f"energy similarity (+{energy_points:.2f})")
+
+    if "likes_acoustic" in user_prefs:
+        acousticness = float(song["acousticness"])
+        acoustic_fit = acousticness if user_prefs["likes_acoustic"] else 1.0 - acousticness
+        score += acoustic_fit
+        preference = "acoustic" if user_prefs["likes_acoustic"] else "non-acoustic"
+        reasons.append(f"{preference} fit (+{acoustic_fit:.2f})")
+
+    return score, reasons
 
 def recommend_songs(user_prefs: Dict, songs: List[Dict], k: int = 5) -> List[Tuple[Dict, float, str]]:
-    """
-    Functional implementation of the recommendation logic.
-    Required by src/main.py
-    """
-    # TODO: Implement scoring and ranking logic
-    # Expected return format: (song_dict, score, explanation)
-    return []
+    """Rank all songs by score and return the top k with explanations."""
+    scored_songs = []
+
+    for song in songs:
+        score, reasons = score_song(user_prefs, song)
+        explanation = "; ".join(reasons)
+        scored_songs.append((song, score, explanation))
+
+    return sorted(scored_songs, key=lambda result: result[1], reverse=True)[:max(0, k)]

@@ -1,4 +1,11 @@
-from src.recommender import Song, UserProfile, Recommender
+from src.recommender import (
+    Recommender,
+    Song,
+    UserProfile,
+    load_songs,
+    recommend_songs,
+    score_song,
+)
 
 def make_small_recommender() -> Recommender:
     songs = [
@@ -59,3 +66,45 @@ def test_explain_recommendation_returns_non_empty_string():
     explanation = rec.explain_recommendation(user, song)
     assert isinstance(explanation, str)
     assert explanation.strip() != ""
+
+
+def test_load_songs_converts_numeric_fields():
+    songs = load_songs("data/songs.csv")
+
+    assert len(songs) == 17
+    assert isinstance(songs[0]["id"], int)
+    assert isinstance(songs[0]["tempo_bpm"], int)
+    assert isinstance(songs[0]["energy"], float)
+
+
+def test_score_song_returns_score_and_reasons():
+    user = {
+        "favorite_genre": "pop",
+        "favorite_mood": "happy",
+        "target_energy": 0.8,
+        "likes_acoustic": False,
+    }
+    song = load_songs("data/songs.csv")[0]
+
+    score, reasons = score_song(user, song)
+
+    assert score == 7.78
+    assert "genre match (+3.00)" in reasons
+    assert "mood match (+2.00)" in reasons
+
+
+def test_recommend_songs_ranks_without_mutating_catalog():
+    songs = load_songs("data/songs.csv")
+    original_ids = [song["id"] for song in songs]
+    user = {
+        "favorite_genre": "pop",
+        "favorite_mood": "happy",
+        "target_energy": 0.8,
+        "likes_acoustic": False,
+    }
+
+    results = recommend_songs(user, songs, k=3)
+
+    assert results[0][0]["title"] == "Sunrise City"
+    assert len(results) == 3
+    assert [song["id"] for song in songs] == original_ids
