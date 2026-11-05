@@ -135,6 +135,17 @@ Chill Lofi favored slow and acoustic tracks. Deep Intense Rock favored fast
 and non-acoustic tracks. The Conflicting Classical profile split its points
 between opposite songs because no song satisfied all of its preferences.
 
+### Why Gym Hero Keeps Showing Up for Happy Pop
+
+`Gym Hero` is a pop song with very high energy and almost no acoustic sound.
+A Happy Pop listener who wants lively music gets three things from it: the
+pop genre bonus, a close energy match, and a good non-acoustic fit. It only
+misses the "happy" mood, since its mood is "intense." That is not enough to
+drop it out of the top five. The system does not know that "intense" feels
+different from "happy" to a person. It only counts matching labels and
+numbers. A bigger catalog with more happy pop songs would push `Gym Hero`
+down the list.
+
 ### Weight Experiment
 
 I temporarily reduced genre from 3.0 to 1.5 points. I also increased energy
